@@ -4,6 +4,8 @@ A GitHub Action for [ryl](https://github.com/owenlamont/ryl), the fast YAML
 linter and formatter. It downloads the ryl release binary for the runner, checks
 it against the release's `SHA256SUMS`, and runs it. Linux, macOS (Apple silicon)
 and Windows runners are supported, on x64 and ARM64 where ryl publishes a binary.
+It runs in bash, which GitHub-hosted runners have (Windows through Git for
+Windows), so a self-hosted Windows runner needs Git for Windows installed.
 
 ## Usage
 
@@ -25,7 +27,9 @@ Each action tag matches a ryl release and installs that release by default.
 | Input | Default | Description |
 | --- | --- | --- |
 | `version` | the tag's ryl release | ryl release to install, as `X.Y.Z` |
-| `args` | `check .` | Arguments for ryl, split like a shell command line |
+| `args` | `check .` | Arguments for ryl on one line, split on whitespace |
+| `config` | | Path to a config file, passed as `-c` |
+| `config-data` | | Inline config, passed whole as `-d` |
 | `install-only` | `false` | Install ryl onto `PATH` without running it |
 
 ## Outputs
@@ -37,15 +41,15 @@ Each action tag matches a ryl release and installs that release by default.
 
 ## Examples
 
-Quoted values in `args` stay whole, so an inline config works as on the command
-line:
+`args` is split on whitespace without quote handling, so pass an inline config
+through `config-data`, which reaches ryl whole:
 
 ```yaml
 - uses: owenlamont/ryl-action@v0.26.1
   with:
-    args: >-
-      check -d '{extends: default, rules: {line-length: disable, truthy: disable},
-      ignore: [pnpm-lock.yaml]}' .
+    config-data: >-
+      {extends: default, rules: {line-length: disable, truthy: disable},
+      ignore: [pnpm-lock.yaml]}
 ```
 
 That yamllint-style YAML config is deprecated in ryl. The TOML equivalent is the
@@ -59,18 +63,16 @@ line-length = "disable"
 truthy = "disable"
 ```
 
-Inline TOML can span lines inside the quotes:
+Inline TOML can span lines:
 
 ```yaml
 - uses: owenlamont/ryl-action@v0.26.1
   with:
-    args: |
-      check -d '
+    config-data: |
       exclude = "pnpm-lock.yaml"
       [lint.rules]
       key-duplicates = "enable"
       truthy = "enable"
-      ' .
 ```
 
 Check formatting as well as lint:

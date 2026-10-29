@@ -15,65 +15,19 @@ if [ "$install_only" != "true" ] && [ "$install_only" != "false" ]; then
     exit 1
 fi
 
-# Splits args like a POSIX shell's quoting (quoted newlines and backslash-newline
-# continuations included) but expands nothing, so $(...) and backticks stay literal.
-split_args() {
-    local input="$1" token="" in_token=false quote="" char next i
-    for ((i = 0; i < ${#input}; i++)); do
-        char="${input:i:1}"
-        next="${input:i+1:1}"
-        if [ "$quote" = "'" ]; then
-            if [ "$char" = "'" ]; then quote=""; else token+="$char"; fi
-        elif [ "$quote" = '"' ]; then
-            if [ "$char" = '"' ]; then
-                quote=""
-            elif [ "$char" = "\\" ] && [ "$next" = $'\n' ]; then
-                i=$((i + 1))
-            elif [ "$char" = "\\" ] && [[ "$next" == [\"\\\$\`] ]]; then
-                i=$((i + 1))
-                token+="$next"
-            else
-                token+="$char"
-            fi
-        else
-            case "$char" in
-            " " | $'\t' | $'\n' | $'\r')
-                if $in_token; then ryl_args+=("$token"); fi
-                token=""
-                in_token=false
-                ;;
-            "'" | '"')
-                quote="$char"
-                in_token=true
-                ;;
-            "\\")
-                i=$((i + 1))
-                if [ "$next" != $'\n' ]; then
-                    token+="$next"
-                    in_token=true
-                fi
-                ;;
-            *)
-                token+="$char"
-                in_token=true
-                ;;
-            esac
-        fi
-    done
-    if [ -n "$quote" ]; then
-        echo "::error::args has an unclosed $quote quote: $input"
-        exit 1
-    fi
-    if $in_token; then ryl_args+=("$token"); fi
+ryl_args=()
+if [ "$install_only" = "false" ]; then
+    read -ra ryl_args <<<"$GHA_RYL_ARGS"
     if [ ${#ryl_args[@]} -eq 0 ]; then
         echo "::error::args is empty; pass a ryl command such as 'check .', or set install-only"
         exit 1
     fi
-}
-
-ryl_args=()
-if [ "$install_only" = "false" ]; then
-    split_args "$GHA_RYL_ARGS"
+    if [ -n "$GHA_RYL_CONFIG" ]; then
+        ryl_args+=(-c "$GHA_RYL_CONFIG")
+    fi
+    if [ -n "$GHA_RYL_CONFIG_DATA" ]; then
+        ryl_args+=(-d "$GHA_RYL_CONFIG_DATA")
+    fi
 fi
 
 case "${RUNNER_OS:-}-${RUNNER_ARCH:-}" in
@@ -150,5 +104,5 @@ if [ "$install_only" = "true" ]; then
     exit 0
 fi
 
-echo "Running: ryl ${GHA_RYL_ARGS}"
+echo "Running: ryl ${ryl_args[*]}"
 "$ryl_path" "${ryl_args[@]}"

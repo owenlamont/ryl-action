@@ -36,23 +36,22 @@ jobs:
       - name: Default args lint the repo against its .ryl.toml
         uses: ./
 
-      - name: Quoted inline YAML config passes (ryl-action#1)
+      - name: Inline yamllint YAML config passes (ryl-action#1)
         uses: ./
         with:
-          args: >-
-            check -d '{extends: default, rules: {line-length: disable, truthy: disable},
-            ignore: [pnpm-lock.yaml]}' tests/fixture.yaml
+          args: check tests/fixture.yaml
+          config-data: >-
+            {extends: default, rules: {line-length: disable, truthy: disable},
+            ignore: [pnpm-lock.yaml]}
 
-      - name: Multi-line inline TOML config with a line continuation passes
+      - name: Multi-line inline TOML config passes
         uses: ./
         with:
-          args: |
-            check \
-              -d '
+          args: check tests/fixture.yaml
+          config-data: |
             [lint.rules]
             key-duplicates = "enable"
             line-length = "disable"
-            ' tests/fixture.yaml
 
       - name: Formatted fixture passes format --check
         uses: ./
@@ -64,15 +63,24 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          args: check -d 'lint.rules = { line-length = { max = 10 } }' tests/fixture.yaml
+          args: check tests/fixture.yaml
+          config-data: lint.rules = { line-length = { max = 10 } }
 
-      - name: Assert the violation failed the step
+      - name: Config file with a violation fails
+        id: config-violation
+        continue-on-error: true
+        uses: ./
+        with:
+          args: check tests/fixture.yaml
+          config: tests/max-10.toml
+
+      - name: Assert both violations failed their steps
         shell: bash
         env:
-          OUTCOME: ${{ steps.violation.outcome }}
+          OUTCOMES: ${{ steps.violation.outcome }} ${{ steps.config-violation.outcome }}
         run: |
-          if [ "$OUTCOME" != "failure" ]; then
-            echo "::error::expected the violation step to fail, got $OUTCOME"
+          if [ "$OUTCOMES" != "failure failure" ]; then
+            echo "::error::expected both violation steps to fail, got $OUTCOMES"
             exit 1
           fi
 

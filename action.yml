@@ -15,10 +15,18 @@ inputs:
     default: 0.26.1
   args:
     description: >-
-      Arguments passed to ryl, split like a shell command line so quoted values
-      stay whole, e.g. check -d 'lint.rules = { truthy = "disable" }' .
+      Arguments passed to ryl on one line, split on whitespace with no quoting;
+      pass config through config or config-data instead.
     required: false
     default: check .
+  config:
+    description: Path to a ryl config file, passed as -c.
+    required: false
+    default: ''
+  config-data:
+    description: Inline ryl config (TOML, or yamllint YAML), passed whole as -d.
+    required: false
+    default: ''
   install-only:
     description: >-
       Install ryl and put it on PATH for later steps without running it; args is
@@ -44,4 +52,6 @@ runs:
       env:
         GHA_RYL_VERSION: ${{ inputs.version }}
         GHA_RYL_ARGS: ${{ inputs.args }}
+        GHA_RYL_CONFIG: ${{ inputs.config }}
+        GHA_RYL_CONFIG_DATA: ${{ inputs.config-data }}
         GHA_RYL_INSTALL_ONLY: ${{ inputs.install-only }}
