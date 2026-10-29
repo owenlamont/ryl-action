@@ -16,23 +16,57 @@ if [ "$install_only" != "true" ] && [ "$install_only" != "false" ]; then
     exit 1
 fi
 
-# Splits the args input the way a shell would, honouring quotes so an inline
-# config such as -d '{extends: default}' stays one argument. xargs parses the
-# quotes without evaluating anything, so $(...) or backticks stay literal.
-workdir="$(mktemp -d)"
-trap 'rm -rf "$workdir"' EXIT
-if [ "$install_only" = "false" ] && [ -z "$(printf '%s' "$GHA_RYL_ARGS" | tr -d '[:space:]')" ]; then
+# Splits args like a POSIX shell's quoting, newlines inside quotes included, but
+# expands nothing, so $(...) and backticks from untrusted text stay literal.
+ryl_args=()
+token=""
+in_token=false
+quote=""
+for ((i = 0; i < ${#GHA_RYL_ARGS}; i++)); do
+    char="${GHA_RYL_ARGS:i:1}"
+    if [ "$quote" = "'" ]; then
+        if [ "$char" = "'" ]; then quote=""; else token+="$char"; fi
+    elif [ "$quote" = '"' ]; then
+        if [ "$char" = '"' ]; then
+            quote=""
+        elif [ "$char" = "\\" ] && [[ "${GHA_RYL_ARGS:i+1:1}" == [\"\\\$\`] ]]; then
+            i=$((i + 1))
+            token+="${GHA_RYL_ARGS:i:1}"
+        else
+            token+="$char"
+        fi
+    else
+        case "$char" in
+        " " | $'\t' | $'\n' | $'\r')
+            if $in_token; then ryl_args+=("$token"); fi
+            token=""
+            in_token=false
+            ;;
+        "'" | '"')
+            quote="$char"
+            in_token=true
+            ;;
+        "\\")
+            i=$((i + 1))
+            token+="${GHA_RYL_ARGS:i:1}"
+            in_token=true
+            ;;
+        *)
+            token+="$char"
+            in_token=true
+            ;;
+        esac
+    fi
+done
+if [ -n "$quote" ]; then
+    echo "::error::args has an unclosed $quote quote: $GHA_RYL_ARGS"
+    exit 1
+fi
+if $in_token; then ryl_args+=("$token"); fi
+if [ "$install_only" = "false" ] && [ ${#ryl_args[@]} -eq 0 ]; then
     echo "::error::args is empty; pass a ryl command such as 'check .', or set install-only"
     exit 1
 fi
-if ! printf '%s' "$GHA_RYL_ARGS" | xargs printf '%s\0' >"${workdir}/args"; then
-    echo "::error::Could not split args (unbalanced quotes?): $GHA_RYL_ARGS"
-    exit 1
-fi
-ryl_args=()
-while IFS= read -r -d '' arg; do
-    ryl_args+=("$arg")
-done <"${workdir}/args"
 
 case "${RUNNER_OS:-}-${RUNNER_ARCH:-}" in
 Linux-X64) asset="ryl-x86_64-unknown-linux-musl.tar.gz" ;;
@@ -51,6 +85,9 @@ if [ "${RUNNER_OS}" = "Windows" ]; then
 fi
 
 base_url="https://github.com/owenlamont/ryl/releases/download/v${version}"
+workdir="$(mktemp -d)"
+trap 'rm -rf "$workdir"' EXIT
+
 download() {
     curl --fail --silent --show-error --location --retry 3 --output "$2" "$1"
 }

@@ -43,6 +43,16 @@ jobs:
             check -d '{extends: default, rules: {line-length: disable, truthy: disable},
             ignore: [pnpm-lock.yaml]}' tests/fixture.yaml
 
+      - name: Multi-line inline TOML config passes
+        uses: ./
+        with:
+          args: |
+            check -d '
+            [lint.rules]
+            key-duplicates = "enable"
+            line-length = "disable"
+            ' tests/fixture.yaml
+
       - name: Formatted fixture passes format --check
         uses: ./
         with:

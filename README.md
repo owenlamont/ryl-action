@@ -59,6 +59,20 @@ line-length = "disable"
 truthy = "disable"
 ```
 
+Inline TOML can span lines inside the quotes:
+
+```yaml
+- uses: owenlamont/ryl-action@v0.26.1
+  with:
+    args: |
+      check -d '
+      exclude = "pnpm-lock.yaml"
+      [lint.rules]
+      key-duplicates = "enable"
+      truthy = "enable"
+      ' .
+```
+
 Check formatting as well as lint:
 
 ```yaml
