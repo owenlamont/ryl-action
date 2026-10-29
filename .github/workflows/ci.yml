@@ -1,0 +1,90 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  action:
+    name: action (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+          - windows-latest
+          - windows-11-arm
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Default args lint the repo against its .ryl.toml
+        uses: ./
+
+      - name: Quoted inline YAML config passes (ryl-action#1)
+        uses: ./
+        with:
+          args: >-
+            check -d '{extends: default, rules: {line-length: disable, truthy: disable},
+            ignore: [pnpm-lock.yaml]}' tests/fixture.yaml
+
+      - name: Formatted fixture passes format --check
+        uses: ./
+        with:
+          args: format --check tests/fixture.yaml
+
+      - name: Inline TOML config with a violation fails
+        id: violation
+        continue-on-error: true
+        uses: ./
+        with:
+          args: check -d 'lint.rules = { line-length = { max = 10 } }' tests/fixture.yaml
+
+      - name: Assert the violation failed the step
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.violation.outcome }}
+        run: |
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "::error::expected the violation step to fail, got $OUTCOME"
+            exit 1
+          fi
+
+      - name: Install an older release only
+        id: install
+        uses: ./
+        with:
+          version: v0.26.0
+          install-only: 'true'
+
+      - name: ryl is on PATH in bash
+        shell: bash
+        env:
+          RYL_VERSION: ${{ steps.install.outputs.ryl-version }}
+          RYL_PATH: ${{ steps.install.outputs.ryl-path }}
+        run: |
+          set -eu
+          test "$RYL_VERSION" = "0.26.0"
+          test -x "$RYL_PATH"
+          test "$(ryl --version)" = "ryl 0.26.0"
+
+      - name: ryl is on PATH in pwsh
+        shell: pwsh
+        run: |
+          $installed = ryl --version
+          if ($installed -ne 'ryl 0.26.0') { throw "unexpected: $installed" }

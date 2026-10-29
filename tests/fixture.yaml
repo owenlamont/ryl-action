@@ -1,0 +1,6 @@
+---
+# A line longer than 10 characters, so a max-10 line-length rule fails.
+name: ryl-action fixture
+items:
+  - one
+  - two
