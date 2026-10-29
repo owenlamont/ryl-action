@@ -15,7 +15,8 @@ inputs:
     default: 0.26.1
   args:
     description: >-
-      Arguments passed to ryl on one line, split on whitespace with no quoting;
+      Arguments passed to ryl, split on whitespace (newlines included) with no
+      quoting;
       pass config through config or config-data instead.
     required: false
     default: check .

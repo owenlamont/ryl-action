@@ -27,7 +27,7 @@ Each action tag matches a ryl release and installs that release by default.
 | Input | Default | Description |
 | --- | --- | --- |
 | `version` | the tag's ryl release | ryl release to install, as `X.Y.Z` |
-| `args` | `check .` | Arguments for ryl on one line, split on whitespace |
+| `args` | `check .` | Arguments for ryl, split on whitespace across lines |
 | `config` | | Path to a config file, passed as `-c` |
 | `config-data` | | Inline config, passed whole as `-d` |
 | `install-only` | `false` | Install ryl onto `PATH` without running it |

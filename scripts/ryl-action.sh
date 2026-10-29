@@ -17,7 +17,8 @@ fi
 
 ryl_args=()
 if [ "$install_only" = "false" ]; then
-    read -ra ryl_args <<<"$GHA_RYL_ARGS"
+    # Folds lines so a multi-line args block passes every line, not only the first.
+    read -ra ryl_args <<<"$(printf '%s' "$GHA_RYL_ARGS" | tr '\r\n' '  ')"
     if [ ${#ryl_args[@]} -eq 0 ]; then
         echo "::error::args is empty; pass a ryl command such as 'check .', or set install-only"
         exit 1

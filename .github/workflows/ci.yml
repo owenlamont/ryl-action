@@ -74,13 +74,24 @@ jobs:
           args: check tests/fixture.yaml
           config: tests/max-10.toml
 
-      - name: Assert both violations failed their steps
+      - name: Config flag on the second line of args fails
+        id: multiline-violation
+        continue-on-error: true
+        uses: ./
+        with:
+          args: |
+            check tests/fixture.yaml
+            -c tests/max-10.toml
+
+      - name: Assert every violation failed its step
         shell: bash
         env:
-          OUTCOMES: ${{ steps.violation.outcome }} ${{ steps.config-violation.outcome }}
+          OUTCOMES: >-
+            ${{ steps.violation.outcome }} ${{ steps.config-violation.outcome }}
+            ${{ steps.multiline-violation.outcome }}
         run: |
-          if [ "$OUTCOMES" != "failure failure" ]; then
-            echo "::error::expected both violation steps to fail, got $OUTCOMES"
+          if [ "$OUTCOMES" != "failure failure failure" ]; then
+            echo "::error::expected every violation step to fail, got $OUTCOMES"
             exit 1
           fi
 
