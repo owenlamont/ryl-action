@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.push.outputs.tag }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -41,12 +43,14 @@ jobs:
         run: uv run --script mirror.py
 
       - name: Push commits and tags
+        id: push
         run: |
           if [ -z "$(git log origin/main..HEAD)" ]; then
             echo "Nothing to push."
             exit 0
           fi
           git push --atomic origin HEAD:refs/heads/main --tags
+          echo "tag=$(git tag --points-at HEAD --list 'v*' --sort=v:refname | tail -n 1)" >>"$GITHUB_OUTPUT"
 
       - name: Reconcile releases from tags
         env:
@@ -72,3 +76,18 @@ jobs:
           done
 
           gh release edit "${TAGS[-1]}" --repo "$GITHUB_REPOSITORY" --latest
+
+  # A push made with GITHUB_TOKEN triggers no workflows, but a dispatch does.
+  ci:
+    needs: mirror
+    if: needs.mirror.outputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Run CI on the new tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.mirror.outputs.tag }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
