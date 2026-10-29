@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Installs a ryl release binary for this runner and runs it with the `args` input.
-# Written for bash 3.2, the /bin/bash macOS runners ship: no mapfile or ${var,,}.
+# Portable to bash 3.2 (macOS's /bin/bash): no mapfile or ${var,,}.
 
 set -euo pipefail
 

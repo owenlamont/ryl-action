@@ -11,8 +11,8 @@ Marketplace requires.
 ## Project Structure
 
 - **`action.yml`** - inputs, outputs and the single composite step.
-- **`scripts/ryl-action.sh`** - install and run logic. It runs under macOS's
-  bash 3.2, so avoid bash 4 builtins (`mapfile`, `${var,,}`, associative arrays).
+- **`scripts/ryl-action.sh`** - install and run logic. Keep it portable to bash 3.2
+  (macOS's `/bin/bash`): no `mapfile`, `${var,,}` or associative arrays.
 - **`mirror.py`** - pins `action.yml`'s `version` default and the README's
   `ryl-action@vX.Y.Z` references to each new ryl release, then commits and tags
   `vX.Y.Z` to match. Run with `uv run --script mirror.py`.
