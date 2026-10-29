@@ -16,56 +16,65 @@ if [ "$install_only" != "true" ] && [ "$install_only" != "false" ]; then
     exit 1
 fi
 
-# Splits args like a POSIX shell's quoting, newlines inside quotes included, but
-# expands nothing, so $(...) and backticks from untrusted text stay literal.
-ryl_args=()
-token=""
-in_token=false
-quote=""
-for ((i = 0; i < ${#GHA_RYL_ARGS}; i++)); do
-    char="${GHA_RYL_ARGS:i:1}"
-    if [ "$quote" = "'" ]; then
-        if [ "$char" = "'" ]; then quote=""; else token+="$char"; fi
-    elif [ "$quote" = '"' ]; then
-        if [ "$char" = '"' ]; then
-            quote=""
-        elif [ "$char" = "\\" ] && [[ "${GHA_RYL_ARGS:i+1:1}" == [\"\\\$\`] ]]; then
-            i=$((i + 1))
-            token+="${GHA_RYL_ARGS:i:1}"
+# Splits args like a POSIX shell's quoting (quoted newlines and backslash-newline
+# continuations included) but expands nothing, so $(...) and backticks stay literal.
+split_args() {
+    local input="$1" token="" in_token=false quote="" char next i
+    for ((i = 0; i < ${#input}; i++)); do
+        char="${input:i:1}"
+        next="${input:i+1:1}"
+        if [ "$quote" = "'" ]; then
+            if [ "$char" = "'" ]; then quote=""; else token+="$char"; fi
+        elif [ "$quote" = '"' ]; then
+            if [ "$char" = '"' ]; then
+                quote=""
+            elif [ "$char" = "\\" ] && [ "$next" = $'\n' ]; then
+                i=$((i + 1))
+            elif [ "$char" = "\\" ] && [[ "$next" == [\"\\\$\`] ]]; then
+                i=$((i + 1))
+                token+="$next"
+            else
+                token+="$char"
+            fi
         else
-            token+="$char"
+            case "$char" in
+            " " | $'\t' | $'\n' | $'\r')
+                if $in_token; then ryl_args+=("$token"); fi
+                token=""
+                in_token=false
+                ;;
+            "'" | '"')
+                quote="$char"
+                in_token=true
+                ;;
+            "\\")
+                i=$((i + 1))
+                if [ "$next" != $'\n' ]; then
+                    token+="$next"
+                    in_token=true
+                fi
+                ;;
+            *)
+                token+="$char"
+                in_token=true
+                ;;
+            esac
         fi
-    else
-        case "$char" in
-        " " | $'\t' | $'\n' | $'\r')
-            if $in_token; then ryl_args+=("$token"); fi
-            token=""
-            in_token=false
-            ;;
-        "'" | '"')
-            quote="$char"
-            in_token=true
-            ;;
-        "\\")
-            i=$((i + 1))
-            token+="${GHA_RYL_ARGS:i:1}"
-            in_token=true
-            ;;
-        *)
-            token+="$char"
-            in_token=true
-            ;;
-        esac
+    done
+    if [ -n "$quote" ]; then
+        echo "::error::args has an unclosed $quote quote: $input"
+        exit 1
     fi
-done
-if [ -n "$quote" ]; then
-    echo "::error::args has an unclosed $quote quote: $GHA_RYL_ARGS"
-    exit 1
-fi
-if $in_token; then ryl_args+=("$token"); fi
-if [ "$install_only" = "false" ] && [ ${#ryl_args[@]} -eq 0 ]; then
-    echo "::error::args is empty; pass a ryl command such as 'check .', or set install-only"
-    exit 1
+    if $in_token; then ryl_args+=("$token"); fi
+    if [ ${#ryl_args[@]} -eq 0 ]; then
+        echo "::error::args is empty; pass a ryl command such as 'check .', or set install-only"
+        exit 1
+    fi
+}
+
+ryl_args=()
+if [ "$install_only" = "false" ]; then
+    split_args "$GHA_RYL_ARGS"
 fi
 
 case "${RUNNER_OS:-}-${RUNNER_ARCH:-}" in
