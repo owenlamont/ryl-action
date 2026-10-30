@@ -1,4 +1,4 @@
-name: ryl
+name: ryl-action
 description: Lint and format YAML with ryl, a fast YAML linter and formatter
 author: owenlamont
 
