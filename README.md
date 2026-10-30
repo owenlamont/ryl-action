@@ -11,7 +11,7 @@ Windows), so a self-hosted Windows runner needs Git for Windows installed.
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: owenlamont/ryl-action@v0.26.1
+- uses: owenlamont/ryl-action@v0.27.0
 ```
 
 The default runs `ryl check .`. ryl enables no rules without a config, so commit
@@ -45,7 +45,7 @@ Each action tag matches a ryl release and installs that release by default.
 through `config-data`, which reaches ryl whole:
 
 ```yaml
-- uses: owenlamont/ryl-action@v0.26.1
+- uses: owenlamont/ryl-action@v0.27.0
   with:
     config-data: >-
       {extends: default, rules: {line-length: disable, truthy: disable},
@@ -66,7 +66,7 @@ truthy = "disable"
 Inline TOML can span lines:
 
 ```yaml
-- uses: owenlamont/ryl-action@v0.26.1
+- uses: owenlamont/ryl-action@v0.27.0
   with:
     config-data: |
       exclude = "pnpm-lock.yaml"
@@ -78,8 +78,8 @@ Inline TOML can span lines:
 Check formatting as well as lint:
 
 ```yaml
-- uses: owenlamont/ryl-action@v0.26.1
-- uses: owenlamont/ryl-action@v0.26.1
+- uses: owenlamont/ryl-action@v0.27.0
+- uses: owenlamont/ryl-action@v0.27.0
   with:
     args: format --check .
 ```
@@ -87,7 +87,7 @@ Check formatting as well as lint:
 Install ryl for later steps:
 
 ```yaml
-- uses: owenlamont/ryl-action@v0.26.1
+- uses: owenlamont/ryl-action@v0.27.0
   with:
     install-only: true
 - run: ryl check --strict config/

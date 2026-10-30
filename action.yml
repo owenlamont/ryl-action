@@ -12,7 +12,7 @@ inputs:
       ryl release to install, as X.Y.Z. Defaults to the release this action tag
       pins.
     required: false
-    default: 0.26.1
+    default: 0.27.0
   args:
     description: >-
       Arguments passed to ryl, split on whitespace (newlines included) with no
