@@ -1,0 +1,76 @@
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-case-conflict" },
+  { id = "check-illegal-windows-names" },
+  { id = "check-merge-conflict" },
+  { id = "check-executables-have-shebangs" },
+  { id = "check-shebang-scripts-are-executable" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "check-added-large-files" },
+  { id = "no-commit-to-branch", args = ["--branch", "main"] },
+  { id = "mixed-line-ending", args = ["--fix=lf"] },
+]
+
+[[repos]]
+repo = "https://github.com/charliermarsh/ruff-pre-commit"
+rev = "v0.17.3"
+hooks = [
+  { id = "ruff-check", args = ["--fix", "--exit-non-zero-on-fix", "--show-fixes"], types_or = ["python", "pyi"] },
+  { id = "ruff-format", types_or = ["python", "pyi"] },
+]
+
+[[repos]]
+repo = "https://github.com/owenlamont/ryl-pre-commit"
+rev = "v0.26.1"
+hooks = [
+  { id = "ryl-check", args = ["--fix"] },
+  { id = "ryl-check-markdown", args = ["--fix"] },
+  { id = "ryl-format" },
+  { id = "ryl-format-markdown" },
+]
+
+[[repos]]
+repo = "https://github.com/rvben/rumdl-pre-commit"
+rev = "v0.3.2"
+hooks = [
+  { id = "rumdl", args = ["--fix"] },
+]
+
+[[repos]]
+repo = "https://github.com/adhtruong/mirrors-typos"
+rev = "v1.51.1"
+hooks = [
+  { id = "typos", args = ["--force-exclude"] },
+]
+
+[[repos]]
+repo = "https://github.com/rhysd/actionlint"
+rev = "v1.7.12"
+hooks = [
+  { id = "actionlint" },
+]
+
+[[repos]]
+repo = "https://github.com/shellcheck-py/shellcheck-py"
+rev = "v0.11.0.1"
+hooks = [
+  { id = "shellcheck", args = ["--severity=style"] },
+]
+
+[[repos]]
+repo = "https://github.com/woodruffw/zizmor-pre-commit"
+rev = "v1.31.1"
+hooks = [
+  {
+    id = "zizmor",
+    args = ["--min-severity", "low", "--min-confidence", "medium", "."],
+    pass_filenames = false,
+  },
+]

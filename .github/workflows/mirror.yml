@@ -1,0 +1,93 @@
+name: mirror
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [ryl_release]
+
+concurrency:
+  group: mirror
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.push.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          enable-cache: false
+
+      - name: Configure git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Pin new ryl releases
+        env:
+          DISPATCH_VERSION: ${{ github.event.client_payload.version }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run --script mirror.py
+
+      - name: Push commits and tags
+        id: push
+        run: |
+          if [ -z "$(git log origin/main..HEAD)" ]; then
+            echo "Nothing to push."
+            exit 0
+          fi
+          git push --atomic origin HEAD:refs/heads/main --tags
+          echo "tag=$(git tag --points-at HEAD --list 'v*' --sort=v:refname | tail -n 1)" >>"$GITHUB_OUTPUT"
+
+      - name: Reconcile releases from tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --tags origin
+
+          mapfile -t TAGS < <(git tag --list 'v*' --sort=v:refname)
+          if [ ${#TAGS[@]} -eq 0 ]; then
+            echo "No v* tags found; skipping release reconciliation."
+            exit 0
+          fi
+
+          for TAG_NAME in "${TAGS[@]}"; do
+            if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              continue
+            fi
+            echo "Creating missing release for $TAG_NAME"
+            gh release create "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG_NAME" \
+              --notes "See: https://github.com/owenlamont/ryl/releases/tag/${TAG_NAME}"
+          done
+
+          gh release edit "${TAGS[-1]}" --repo "$GITHUB_REPOSITORY" --latest
+
+  # A push made with GITHUB_TOKEN triggers no workflows, but a dispatch does.
+  ci:
+    needs: mirror
+    if: needs.mirror.outputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Run CI on the new tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.mirror.outputs.tag }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"

@@ -1,0 +1,5 @@
+rules:
+  # actionlint 1.7.12 rejects the `uses: $/` form this audit asks for, and CI
+  # must run the action from the checkout under test.
+  self-repository:
+    disable: true
